@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="广州 · 羊城漫游：手绘风广州文旅小程序，含学点、美食、Top10 排行与数据备份。">
+  <meta name="theme-color" content="#fbf3e0">
+  <title>广州 · 羊城漫游</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 手绘抖动滤镜：所有插画共用 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <div class="phone" id="phone">
+    <header class="topbar">
+      <div class="brand">
+        <span id="brand-mark" class="brand-mark"></span>
+        <h1>羊城漫游</h1>
+      </div>
+      <div class="who" id="who"></div>
+    </header>
+
+    <main class="view" id="view" tabindex="-1"></main>
+
+    <nav class="tabbar" id="tabbar" aria-label="主导航"></nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

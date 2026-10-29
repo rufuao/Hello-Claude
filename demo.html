@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>演示 · 羊城漫游</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="demo-body">
+  <div class="demo-stage" id="stage">
+    <iframe id="app" src="index.html?demo=1" title="羊城漫游操作演示"></iframe>
+  </div>
+
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <path d="M4 2.5 L4 19.5 L8.6 15.2 L11.6 21.6 L14.6 20.2 L11.7 14.0 L18 13.8 Z" fill="#fffaf0" stroke="#2b2b2b" stroke-width="1.6" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="ripple" id="ripple" aria-hidden="true"></div>
+
+  <button class="btn primary replay" id="replay" type="button">重新播放</button>
+
+  <script>
+  (function () {
+    'use strict';
+    var frame = document.getElementById('app');
+    var cursor = document.getElementById('cursor');
+    var ripple = document.getElementById('ripple');
+    var seq = 0;
+    var pending = Object.create(null);
+    var started = false;
+
+    // 接收 index.html（?demo=1）的回复
+    window.addEventListener('message', function (e) {
+      var m = e.data;
+      if (!m) return;
+      if (m.__gz === 'demo-ready') return start();
+      if (m.__gz === 'demo-reply' && pending[m.id]) {
+        var fn = pending[m.id];
+        delete pending[m.id];
+        fn(m);
+      }
+    });
+
+    function call(cmd, args) {
+      return new Promise(function (resolve) {
+        var id = ++seq;
+        pending[id] = resolve;
+        var msg = { __gz: 'demo', cmd: cmd, id: id };
+        Object.keys(args || {}).forEach(function (k) { msg[k] = args[k]; });
+        frame.contentWindow.postMessage(msg, '*');
+        setTimeout(function () {
+          if (pending[id]) { delete pending[id]; resolve({ ok: false }); }
+        }, 3000);
+      });
+    }
+
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    // 滚动到目标并返回其在页面中的坐标
+    function locate(sel) {
+      return call('scrollto', { sel: sel }).then(function () { return sleep(650); }).then(function () {
+        return call('rect', { sel: sel });
+      }).then(function (res) {
+        if (!res.ok || !res.rect) return null;
+        var fr = frame.getBoundingClientRect();
+        return { x: fr.left + res.rect.x + res.rect.w / 2, y: fr.top + res.rect.y + res.rect.h / 2 };
+      });
+    }
+
+    function moveCursor(p) {
+      cursor.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+    }
+
+    function flash(p) {
+      ripple.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+      ripple.classList.remove('go');
+      void ripple.offsetWidth;
+      ripple.classList.add('go');
+    }
+
+    async function tap(sel, pause) {
+      var p = await locate(sel);
+      if (!p) return;
+      moveCursor(p);
+      await sleep(750);
+      flash(p);
+      await sleep(160);
+      await call('click', { sel: sel });
+      await sleep(pause || 900);
+    }
+
+    async function typeIn(sel, text) {
+      var p = await locate(sel);
+      if (!p) return;
+      moveCursor(p);
+      await sleep(700);
+      flash(p);
+      for (var i = 1; i <= text.length; i++) {
+        await call('type', { sel: sel, text: text.slice(0, i) });
+        await sleep(170);
+      }
+      await sleep(350);
+    }
+
+    async function run() {
+      cursor.classList.add('on');
+      await sleep(500);
+      await call('reset');
+      await sleep(900);
+
+      // 1. 注册并设置个人资料
+      await tap('[data-tab="me"]', 900);
+      await tap('[data-act="switch-auth"][data-mode="register"]', 900);
+      await typeIn('#auth-user', '阿粤');
+      await typeIn('#auth-pass', 'gz2026');
+      await typeIn('#auth-nick', '岭南小粤');
+      await tap('#auth-submit', 1400);
+      await tap('[data-act="avatar"][data-idx="2"]', 800);
+      await tap('[data-act="theme"][data-idx="1"]', 1100);
+
+      // 2. 浏览学点、点赞与收藏
+      await tap('[data-tab="attractions"]', 1000);
+      await tap('[data-act="like"][data-id="a1"]', 1000);
+      await tap('[data-act="fav"][data-id="a3"]', 1000);
+      await tap('[data-act="view"][data-id="a2"]', 900);
+      await tap('[data-act="like"][data-id="a10"]', 1300);
+
+      // 3. 浏览美食并点赞
+      await tap('[data-tab="foods"]', 900);
+      await tap('[data-act="like"][data-id="f1"]', 900);
+      await tap('[data-act="like"][data-id="f5"]', 1300);
+
+      // 4. Top10 排名变化
+      await tap('[data-tab="top"]', 1800);
+      await sleep(1200);
+      await tap('[data-act="board"][data-board="food"]', 2000);
+      await tap('[data-act="board"][data-board="attr"]', 1600);
+
+      // 5. 我的页：收藏、浏览历史、导出备份
+      await tap('[data-tab="me"]', 1000);
+      await tap('#btn-export', 1600);
+
+      // 结束定格
+      cursor.classList.remove('on');
+      document.body.classList.add('done');
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+      run();
+    }
+
+    document.getElementById('replay').addEventListener('click', function () {
+      window.location.reload();
+    });
+
+    // 兜底：若未收到 demo-ready 信号，稍后也开始
+    setTimeout(start, 2500);
+  })();
+  </script>
+</body>
+</html>
