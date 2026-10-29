@@ -73,7 +73,8 @@
     }
 
     function flash(p) {
-      ripple.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+      ripple.style.left = p.x + 'px';
+      ripple.style.top = p.y + 'px';
       ripple.classList.remove('go');
       void ripple.offsetWidth;
       ripple.classList.add('go');
